@@ -1,6 +1,9 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\BookController;
+use App\Http\Controllers\CategoryController;
+use App\Models\Book;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -26,13 +29,36 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
+    $userId = auth()->id();
+    
+    $stats = [
+        'total_books' => Book::where('user_id', $userId)->count(),
+        'read_books' => Book::where('user_id', $userId)->where('is_read', true)->count(),
+        'unread_books' => Book::where('user_id', $userId)->where('is_read', false)->count(),
+        'average_rating' => Book::where('user_id', $userId)->whereNotNull('rating')->avg('rating'),
+        'books_by_category' => Book::where('user_id', $userId)
+            ->join('categories', 'books.category_id', '=', 'categories.id')
+            ->selectRaw('categories.name as category, count(*) as count')
+            ->groupBy('categories.name')
+            ->get(),
+    ];
+    
+    return Inertia::render('Dashboard', [
+        'stats' => $stats,
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Book routes
+    Route::resource('books', BookController::class);
+    Route::post('/books/{book}/toggle-read', [BookController::class, 'toggleRead'])->name('books.toggle-read');
+    
+    // Category routes
+    Route::get('/api/categories', [CategoryController::class, 'index'])->name('categories.index');
 });
 
 require __DIR__.'/auth.php';
