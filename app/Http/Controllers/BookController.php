@@ -48,7 +48,7 @@ class BookController extends Controller
 
         // Filter by rating
         if ($request->has('rating') && $request->rating) {
-            $query->where('rating', $request->rating);
+            $query->where('rating', '>=', $request->rating);
         }
 
         // Sort
