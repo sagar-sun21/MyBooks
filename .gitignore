@@ -15,3 +15,5 @@ yarn-error.log
 /storage/*.key
 /storage/logs/*.log
 public/build/
+/storage
+/storage
