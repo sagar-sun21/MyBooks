@@ -23,11 +23,13 @@ class UpdateBookRequest extends FormRequest
     {
         return [
             'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'author' => ['sometimes', 'required', 'string', 'max:255'],
+            'author_id' => ['nullable', 'exists:authors,id'],
+            'author' => ['nullable', 'string', 'max:255'],
             'isbn' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'cover_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:2048'],
-            'category_id' => ['nullable', 'exists:categories,id'],
+            'cover_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:6144'],
+            'category_ids' => ['nullable', 'array'],
+            'category_ids.*' => ['exists:categories,id'],
             'is_read' => ['boolean'],
             'rating' => ['nullable', 'integer', 'min:1', 'max:5'],
             'notes' => ['nullable', 'string'],

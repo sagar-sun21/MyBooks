@@ -4,9 +4,10 @@ import { Head, Link, router } from '@inertiajs/react';
 import BookCard from '@/Components/Books/BookCard';
 import SearchBar from '@/Components/Books/SearchBar';
 import FilterDropdown from '@/Components/Books/FilterDropdown';
+import FilterCheckboxDropdown from '@/Components/Books/FilterCheckboxDropdown';
 import ConfirmationModal from '@/Components/Books/ConfirmationModal';
 
-export default function Index({ auth, books, categories, filters }) {
+export default function Index({ auth, books, categories, authors = [], filters }) {
     const [deleteModal, setDeleteModal] = useState({ show: false, bookId: null });
     const [processing, setProcessing] = useState(false);
 
@@ -19,6 +20,19 @@ export default function Index({ auth, books, categories, filters }) {
 
     const handleFilter = (key, value) => {
         router.get(route('books.index'), { ...filters, [key]: value }, {
+            preserveState: true,
+            replace: true,
+        });
+    };
+
+    const handleMultiFilter = (key, values) => {
+        const newFilters = { ...filters };
+        if (values.length === 0) {
+            delete newFilters[key];
+        } else {
+            newFilters[key] = values;
+        }
+        router.get(route('books.index'), newFilters, {
             preserveState: true,
             replace: true,
         });
@@ -72,8 +86,8 @@ export default function Index({ auth, books, categories, filters }) {
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     {/* Filters */}
-                    <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 mb-6">
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-white dark:bg-gray-800 shadow-sm sm:rounded-lg p-6 mb-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                             <div className="md:col-span-2">
                                 <SearchBar
                                     initialValue={filters.search}
@@ -81,9 +95,16 @@ export default function Index({ auth, books, categories, filters }) {
                                 />
                             </div>
                             <FilterDropdown
-                                label="Category"
-                                value={filters.category}
-                                onChange={(value) => handleFilter('category', value)}
+                                label="Author"
+                                value={filters.author}
+                                onChange={(value) => handleFilter('author', value)}
+                                options={authors.map(author => ({ value: author.id, label: author.name }))}
+                                placeholder="All Authors"
+                            />
+                            <FilterCheckboxDropdown
+                                label="Categories"
+                                values={filters.categories || []}
+                                onChange={(values) => handleMultiFilter('categories', values)}
                                 options={categories.map(cat => ({ value: cat.id, label: cat.name }))}
                                 placeholder="All Categories"
                             />

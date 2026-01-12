@@ -12,7 +12,6 @@ class Book extends Model
 
     protected $fillable = [
         'user_id',
-        'category_id',
         'author_id',
         'title',
         'isbn',
@@ -37,11 +36,11 @@ class Book extends Model
     }
 
     /**
-     * Get the category of the book.
+     * Get the categories for the book.
      */
-    public function category()
+    public function categories()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsToMany(Category::class);
     }
 
     /**

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import InputLabel from '@/Components/InputLabel';
@@ -9,19 +9,34 @@ import StarRating from '@/Components/Books/StarRating';
 import ImageUpload from '@/Components/Books/ImageUpload';
 import Checkbox from '@/Components/Checkbox';
 
-export default function Edit({ auth, book, categories }) {
+export default function Edit({ auth, book, categories, authors = [] }) {
+    const [isAuthorOther, setIsAuthorOther] = useState(false);
+    const [authorsList, setAuthorsList] = useState(authors);
+
+    // Get initial category IDs from book's categories
+    const initialCategoryIds = book.categories?.map(c => c.id) || [];
+    // Check if author is in the existing list
+    const initialAuthorId = book.author_id || '';
+
     const { data, setData, post, processing, errors } = useForm({
         title: book.title || '',
-        author: book.author || '',
+        author_id: initialAuthorId,
+        author: '',
         isbn: book.isbn || '',
         description: book.description || '',
         cover_image: null,
-        category_id: book.category?.id || '',
+        category_ids: initialCategoryIds,
         is_read: book.is_read || false,
         rating: book.rating || 0,
         notes: book.notes || '',
         _method: 'PUT',
     });
+
+    useEffect(() => {
+        if (data.author_id && data.author_id !== 'other') {
+            setIsAuthorOther(false);
+        }
+    }, [data.author_id]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -70,17 +85,54 @@ export default function Edit({ auth, book, categories }) {
 
                                     {/* Author */}
                                     <div>
-                                        <InputLabel htmlFor="author" value="Author *" />
-                                        <TextInput
-                                            id="author"
-                                            type="text"
-                                            value={data.author}
-                                            onChange={(e) => setData('author', e.target.value)}
-                                            className="mt-1 block w-full"
+                                        <InputLabel htmlFor="author_id" value="Author *" />
+                                        <select
+                                            id="author_id"
+                                            value={data.author_id}
+                                            onChange={(e) => {
+                                                if (e.target.value === 'other') {
+                                                    setIsAuthorOther(true);
+                                                    setData('author_id', 'other');
+                                                    setData('author', '');
+                                                } else {
+                                                    setIsAuthorOther(false);
+                                                    setData('author_id', e.target.value);
+                                                    const selectedAuthor = authorsList.find(a => a.id === parseInt(e.target.value));
+                                                    if (selectedAuthor) {
+                                                        setData('author', selectedAuthor.name);
+                                                    }
+                                                }
+                                            }}
+                                            className="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
                                             required
-                                        />
-                                        <InputError message={errors.author} className="mt-2" />
+                                        >
+                                            <option value="">Select an author</option>
+                                            {authorsList.map((author) => (
+                                                <option key={author.id} value={author.id}>
+                                                    {author.name}
+                                                </option>
+                                            ))}
+                                            <option value="other">Other</option>
+                                        </select>
+                                        <InputError message={errors.author_id || errors.author} className="mt-2" />
                                     </div>
+
+                                    {/* Author Input (shown when "Other" is selected) */}
+                                    {isAuthorOther && (
+                                        <div>
+                                            <InputLabel htmlFor="author" value="New Author Name *" />
+                                            <TextInput
+                                                id="author"
+                                                type="text"
+                                                value={data.author}
+                                                onChange={(e) => setData('author', e.target.value)}
+                                                className="mt-1 block w-full"
+                                                placeholder="Enter new author name"
+                                                required
+                                            />
+                                            <InputError message={errors.author} className="mt-2" />
+                                        </div>
+                                    )}
 
                                     {/* ISBN */}
                                     <div>
@@ -97,21 +149,34 @@ export default function Edit({ auth, book, categories }) {
 
                                     {/* Category */}
                                     <div>
-                                        <InputLabel htmlFor="category_id" value="Category" />
-                                        <select
-                                            id="category_id"
-                                            value={data.category_id}
-                                            onChange={(e) => setData('category_id', e.target.value)}
-                                            className="mt-1 block w-full border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 focus:border-indigo-500 dark:focus:border-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-600 rounded-md shadow-sm"
-                                        >
-                                            <option value="">Select a category</option>
-                                            {categories.map((category) => (
-                                                <option key={category.id} value={category.id}>
-                                                    {category.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <InputError message={errors.category_id} className="mt-2" />
+                                        <InputLabel value="Categories" />
+                                        <div className="mt-2 space-y-2 p-3 border border-gray-300 dark:border-gray-700 rounded-md bg-gray-50 dark:bg-gray-900">
+                                            {categories.length > 0 ? (
+                                                categories.map((category) => (
+                                                    <label key={category.id} className="flex items-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            value={category.id}
+                                                            checked={data.category_ids.includes(category.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setData('category_ids', [...data.category_ids, parseInt(e.target.value)]);
+                                                                } else {
+                                                                    setData('category_ids', data.category_ids.filter(id => id !== parseInt(e.target.value)));
+                                                                }
+                                                            }}
+                                                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-700 dark:bg-gray-800 dark:text-indigo-500"
+                                                        />
+                                                        <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">
+                                                            {category.name}
+                                                        </span>
+                                                    </label>
+                                                ))
+                                            ) : (
+                                                <p className="text-sm text-gray-500 dark:text-gray-400">No categories available</p>
+                                            )}
+                                        </div>
+                                        <InputError message={errors.category_ids} className="mt-2" />
                                     </div>
 
                                     {/* Description */}
