@@ -18,18 +18,15 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.2'
+          php-version: '8.1'
           extensions: bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, pdo_mysql, tokenizer, xml, gd
           coverage: none
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version: '20'
           cache: 'npm'
-
-      - name: Install Composer dependencies
-        run: composer install --optimize-autoloader --no-dev --no-interaction --prefer-dist
 
       - name: Install NPM dependencies
         run: npm ci
@@ -43,24 +40,39 @@ jobs:
           server: ${{ secrets.FTP_SERVER }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
-          server-dir: ./books.sun-skill.my.id/
+          server-dir: ${{ secrets.FTP_SERVER_DIR }}
+          local-dir: ./
+          dangerous-clean-slate: false
           exclude: |
             **/.git*
             **/.git*/**
             **/node_modules/**
+            **/vendor/**
             .env
             **/tests/**
+            **/.github/**
             **/storage/logs/**
             **/storage/framework/cache/**
             **/storage/framework/sessions/**
             **/storage/framework/views/**
 
-      - name: Post-deployment reminder
+      - name: Post-deployment instructions
         run: |
-          echo "=================================================="
-          echo "⚠️  Remember to manually run these commands via cPanel Terminal or SSH:"
-          echo "   - php artisan migrate --force"
-          echo "   - php artisan config:cache"
-          echo "   - php artisan route:cache"
-          echo "   - php artisan view:cache"
-          echo "=================================================="
+          echo "✅ Files deployed successfully!"
+          echo ""
+          echo "⚠️  IMPORTANT: Run these commands on your server (via cPanel Terminal, SSH, or create a deploy.php script):"
+          echo ""
+          echo "1. Install dependencies:"
+          echo "   composer install --optimize-autoloader --no-dev"
+          echo ""
+          echo "2. Run migrations:"
+          echo "   php artisan migrate --force"
+          echo ""
+          echo "3. Clear and cache:"
+          echo "   php artisan optimize:clear"
+          echo "   php artisan config:cache"
+          echo "   php artisan route:cache"
+          echo "   php artisan view:cache"
+          echo ""
+          echo "4. Create storage link (first time only):"
+          echo "   php artisan storage:link"

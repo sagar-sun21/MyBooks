@@ -301,373 +301,543 @@ For future updates:
 
 ## Automated Deployment with GitHub Actions
 
-MyBooks includes three GitHub Actions workflows to automatically deploy your application to shared hosting when you push code to the main branch. This eliminates manual deployment steps and ensures consistent deployments.
+MyBooks includes a single, optimized GitHub Actions workflow that automatically deploys your application to shared hosting via FTP when you push code to the main branch.
 
-### Overview of Workflows
+### Overview
 
-The repository includes three workflow files in `.github/workflows/`:
+**Single Workflow Approach:**
+- The `deploy.yml` workflow is designed for shared hosting without SSH access
+- Files are deployed via FTP using `SamKirkland/FTP-Deploy-Action@v4.3.5`
+- The `vendor` folder is **excluded** from upload for faster deployments
+- Manual post-deployment steps are required to install dependencies and run Laravel commands
 
-1. **deploy-ftp.yml** - FTP deployment with SSH post-deployment commands
-2. **deploy-sftp.yml** - SFTP deployment with SSH post-deployment commands  
-3. **deploy-no-ssh.yml** - FTP deployment without SSH (manual post-deployment steps)
+**Why Vendor Folder Is Excluded:**
+- Uploading `vendor` folder via FTP = 10-30 minutes (5,000+ files)
+- Running `composer install` on server = 30-60 seconds
+- **Result: 90% faster deployments!**
 
-All workflows automatically:
-- Set up PHP 8.1 with required extensions
-- Set up Node.js 20
-- Install production Composer dependencies
-- Install NPM dependencies
-- Build production assets
-- Deploy files to your hosting
+**What Gets Deployed:**
+- All application code
+- Built assets in `public/build/` (from `npm run build`)
+- Configuration files
+- Database migrations and seeders
 
-### Choosing the Right Workflow
+**What Doesn't Get Deployed:**
+- `vendor/` - Composer dependencies (installed on server)
+- `node_modules/` - NPM dependencies (not needed, assets are built)
+- `.git/` - Git repository files
+- `tests/` - Test files
+- `.env` - Environment file (must exist on server)
+- `.github/` - GitHub Actions workflows
+- Cache and log files in `storage/`
 
-**Use `deploy-ftp.yml` if:**
-- Your hosting provides FTP access
-- You have SSH access for running post-deployment commands
-- Most common for shared hosting like cPanel with SSH enabled
+### Quick Setup Guide
 
-**Use `deploy-sftp.yml` if:**
-- Your hosting provides SFTP (more secure than FTP)
-- You have SSH access for running post-deployment commands
-- Recommended for better security
+#### Step 1: Add GitHub Secrets
 
-**Use `deploy-no-ssh.yml` if:**
-- Your hosting only provides FTP access
-- You don't have SSH access
-- You can run commands manually via cPanel Terminal or hosting control panel
-
-### Setup Instructions
-
-#### Step 1: Enable Your Chosen Workflow
-
-Only one workflow should be active at a time. The other two should be disabled to prevent conflicts.
-
-**Option A: Delete Unused Workflows**
-```bash
-# If using FTP with SSH, delete the others
-rm .github/workflows/deploy-sftp.yml
-rm .github/workflows/deploy-no-ssh.yml
-
-# If using SFTP with SSH, delete the others
-rm .github/workflows/deploy-ftp.yml
-rm .github/workflows/deploy-no-ssh.yml
-
-# If using FTP without SSH, delete the others
-rm .github/workflows/deploy-ftp.yml
-rm .github/workflows/deploy-sftp.yml
-```
-
-**Option B: Rename Unused Workflows**
-```bash
-# Rename to .yml.disabled to keep them for reference
-mv .github/workflows/deploy-sftp.yml .github/workflows/deploy-sftp.yml.disabled
-mv .github/workflows/deploy-no-ssh.yml .github/workflows/deploy-no-ssh.yml.disabled
-```
-
-#### Step 2: Add Repository Secrets
-
-Navigate to your GitHub repository:
-
-1. Go to **Settings** → **Secrets and variables** → **Actions**
-2. Click **New repository secret**
-3. Add the required secrets based on your chosen workflow
-
-#### Required Secrets for `deploy-ftp.yml`:
+1. Go to: https://github.com/sagar-sun21/MyBooks/settings/secrets/actions
+2. Click "New repository secret"
+3. Add these four secrets:
 
 | Secret Name | Description | Example |
 |-------------|-------------|---------|
 | `FTP_SERVER` | FTP server hostname | `ftp.yourdomain.com` |
 | `FTP_USERNAME` | FTP username | `username@yourdomain.com` |
 | `FTP_PASSWORD` | FTP password | `your_ftp_password` |
-| `FTP_SERVER_DIR` | Remote directory path | `/public_html/` or `/home/username/laravel/` |
-| `SSH_HOST` | SSH server hostname | `yourdomain.com` or `123.45.67.89` |
-| `SSH_USERNAME` | SSH username | `username` |
-| `SSH_PASSWORD` | SSH password | `your_ssh_password` |
-| `SSH_PORT` | SSH port | `22` (default) or custom port |
-| `DEPLOY_PATH` | Full path to Laravel on server | `/home/username/laravel` |
+| `FTP_SERVER_DIR` | Remote directory path | `/public_html/mybooks/` or `/home/username/laravel/` |
 
-#### Required Secrets for `deploy-sftp.yml`:
+**Important:** Ensure `FTP_SERVER_DIR` ends with a trailing slash `/`
 
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `SFTP_SERVER` | SFTP server hostname | `sftp.yourdomain.com` |
-| `SFTP_USERNAME` | SFTP username | `username` |
-| `SFTP_PASSWORD` | SFTP password | `your_sftp_password` |
-| `SFTP_PORT` | SFTP port | `22` (default) or custom port |
-| `SFTP_REMOTE_PATH` | Remote directory path | `/home/username/laravel/` |
-| `SSH_HOST` | SSH server hostname | `yourdomain.com` |
-| `SSH_USERNAME` | SSH username | `username` |
-| `SSH_PASSWORD` | SSH password | `your_ssh_password` |
-| `SSH_PORT` | SSH port | `22` |
-| `DEPLOY_PATH` | Full path to Laravel on server | `/home/username/laravel` |
-
-#### Required Secrets for `deploy-no-ssh.yml`:
-
-| Secret Name | Description | Example |
-|-------------|-------------|---------|
-| `FTP_SERVER` | FTP server hostname | `ftp.yourdomain.com` |
-| `FTP_USERNAME` | FTP username | `username@yourdomain.com` |
-| `FTP_PASSWORD` | FTP password | `your_ftp_password` |
-| `FTP_SERVER_DIR` | Remote directory path | `/public_html/` or `/home/username/laravel/` |
-
-#### Step 3: Trigger the Workflow
-
-The workflow triggers automatically when you push to the `main` branch:
+#### Step 2: Push to Main Branch
 
 ```bash
 git add .
-git commit -m "Deploy to production"
+git commit -m "Your changes"
 git push origin main
 ```
 
-#### Step 4: Monitor Deployment
+The workflow will trigger automatically and:
+1. Set up PHP 8.1 with required extensions
+2. Set up Node.js 20 with npm cache
+3. Install NPM dependencies with `npm ci`
+4. Build production assets with `npm run build`
+5. Deploy files via FTP (excluding vendor, node_modules, etc.)
 
-1. Go to your GitHub repository
-2. Click the **Actions** tab
-3. Click on the running workflow to see deployment progress
-4. Check each step for success or errors
+#### Step 3: Monitor Deployment
 
-### Workflow Details
+1. Go to: https://github.com/sagar-sun21/MyBooks/actions
+2. Click on the latest workflow run
+3. Watch the deployment progress (~2-3 minutes)
+4. Green checkmark = successful deployment
+5. Red X = failed (check logs for errors)
 
-#### What Each Workflow Does:
+#### Step 4: Run Post-Deployment Commands
 
-**Build Phase (all workflows):**
-1. Checks out your code from the repository
-2. Sets up PHP 8.1 with required extensions (bcmath, ctype, fileinfo, json, mbstring, openssl, pdo, pdo_mysql, tokenizer, xml, gd)
-3. Sets up Node.js 20 with npm caching
-4. Installs Composer dependencies with production optimization flags:
-   - `--optimize-autoloader` - Generates optimized class loader
-   - `--no-dev` - Excludes development dependencies
-   - `--no-interaction` - Non-interactive mode
-   - `--prefer-dist` - Downloads distribution packages
-5. Installs NPM dependencies using `npm ci` for deterministic builds
-6. Builds production assets with `npm run build`
+**CRITICAL:** After deployment completes, you must run these commands on your server.
 
-**Deploy Phase (FTP workflows):**
-- Uploads files via FTP to your hosting server
-- Excludes unnecessary files:
-  - `.git*` - Git repository files
-  - `node_modules/` - NPM dependencies
-  - `.env` - Environment configuration (must be manually created on server)
-  - `tests/` - Test files
-  - `storage/logs/` - Log files
-  - `storage/framework/cache/` - Cache files
-  - `storage/framework/sessions/` - Session files
-  - `storage/framework/views/` - Compiled view files
+Choose one of three options:
 
-**Deploy Phase (SFTP workflow):**
-- Uploads files via SFTP (more secure than FTP)
-- Uses same file exclusions as FTP
+**Option A: Via cPanel Terminal (Recommended)**
 
-**Post-Deployment (FTP and SFTP with SSH):**
-Automatically runs these Laravel commands on your server:
-- `php artisan migrate --force` - Runs database migrations
-- `php artisan config:cache` - Caches configuration
-- `php artisan route:cache` - Caches routes
-- `php artisan view:cache` - Caches views
-- `php artisan storage:link` - Creates storage symlink
+1. Log into cPanel
+2. Go to "Terminal" or "Advanced → Terminal"
+3. Navigate to your Laravel directory:
+   ```bash
+   cd public_html/mybooks  # or your path
+   ```
+4. Run the commands below
 
-SFTP workflow also runs `php artisan optimize:clear` first to clear all caches before rebuilding them.
+**Option B: Via SSH (if available)**
 
-**Post-Deployment (No SSH workflow):**
-- Displays reminder message with commands to run manually
-- You must run the commands via cPanel Terminal or SSH after deployment
+```bash
+ssh username@yourdomain.com
+cd /home/username/laravel  # or your path
+# Run commands below
+```
+
+**Option C: Create a Deployment Script**
+
+Create a file `deploy.php` in your Laravel root directory:
+
+```php
+<?php
+// deploy.php - Run post-deployment tasks
+// IMPORTANT: Delete this file after use or protect it with a secret token
+
+$commands = [
+    'composer install --optimize-autoloader --no-dev 2>&1',
+    'php artisan migrate --force 2>&1',
+    'php artisan optimize:clear 2>&1',
+    'php artisan config:cache 2>&1',
+    'php artisan route:cache 2>&1',
+    'php artisan view:cache 2>&1',
+];
+
+echo "<pre>";
+foreach ($commands as $command) {
+    echo "\n" . str_repeat('=', 50) . "\n";
+    echo "Running: $command\n";
+    echo str_repeat('=', 50) . "\n";
+    passthru($command);
+}
+echo "</pre>";
+
+echo "\n\n✅ Deployment tasks completed!\n";
+echo "⚠️  REMEMBER TO DELETE THIS FILE NOW!\n";
+```
+
+Then visit: `https://yourdomain.com/deploy.php` after each deployment.
+
+**⚠️ SECURITY WARNING:** Delete `deploy.php` immediately after use!
+
+**Required Commands:**
+
+```bash
+# 1. Install Composer dependencies (CRITICAL - vendor folder not uploaded)
+composer install --optimize-autoloader --no-dev
+
+# 2. Run database migrations
+php artisan migrate --force
+
+# 3. Clear all caches
+php artisan optimize:clear
+
+# 4. Build optimized caches
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+
+# 5. Create storage link (first deployment only)
+php artisan storage:link
+```
+
+### Why This Approach?
+
+**Faster Deployments:**
+- Traditional FTP upload of `vendor` folder with 5,000+ files takes 10-30 minutes
+- Running `composer install` on the server takes only 30-60 seconds
+- **90% faster deployment times!**
+
+**Other Excluded Folders:**
+- `node_modules` - Not needed; built assets are in `public/build/`
+- `.git` - Not needed on production server
+- `tests` - Not needed on production server
+- Cache and log files - Generated fresh on server
+
+**Rsync-like Behavior:**
+- Only changed files are uploaded
+- Unchanged files are skipped
+- Keeps deployments fast after the first upload
 
 ### First Deployment Checklist
 
-Before your first automated deployment, complete these manual steps on your server:
+**Before First Deployment:**
 
-- [ ] Create MySQL database and user via cPanel/hosting control panel
-- [ ] Note database credentials (name, username, password)
-- [ ] Create `.env` file on server by copying `.env.example`
-- [ ] Configure `.env` with:
-  - Database credentials
+- [ ] Add all four GitHub Secrets (`FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD`, `FTP_SERVER_DIR`)
+- [ ] Ensure FTP credentials are correct and tested
+- [ ] Verify `FTP_SERVER_DIR` path exists on your server
+- [ ] Create `.env` file on server manually (copy from `.env.example`)
+- [ ] Update `.env` with production settings:
   - `APP_ENV=production`
   - `APP_DEBUG=false`
   - `APP_URL=https://yourdomain.com`
-- [ ] Generate application key: `php artisan key:generate`
-- [ ] Set proper permissions on `storage/` and `bootstrap/cache/` directories (755 or 775)
+- [ ] Create database and user via cPanel
+- [ ] Update `.env` with database credentials
+- [ ] Run `php artisan key:generate` on server
+- [ ] Set proper permissions on `storage/` and `bootstrap/cache/` (775)
 - [ ] Configure document root to point to `public/` directory
 - [ ] Set up SSL certificate (Let's Encrypt recommended)
-- [ ] Add all required GitHub Secrets (see tables above)
-- [ ] Disable or delete unused workflow files
 
-**After First Automated Deployment:**
-- [ ] Verify files deployed correctly
-- [ ] Check that `vendor/` and `public/build/` directories exist
-- [ ] Run `php artisan migrate --force` (if using no-SSH workflow)
+**After First Deployment:**
+
+- [ ] Verify files uploaded successfully
+- [ ] Check that `public/build/` directory exists with assets
+- [ ] Run `composer install --optimize-autoloader --no-dev` on server
+- [ ] Run `php artisan migrate --force` to create database tables
 - [ ] Run `php artisan db:seed --class=CategorySeeder` to seed categories
+- [ ] Run `php artisan storage:link` to create storage symlink
 - [ ] Verify storage symlink: `ls -la public/storage`
+- [ ] Clear and rebuild caches:
+  ```bash
+  php artisan optimize:clear
+  php artisan config:cache
+  php artisan route:cache
+  php artisan view:cache
+  ```
 - [ ] Test application in browser
-- [ ] Register test account and create a book
+- [ ] Register a test account
+- [ ] Try creating a book with image upload
+- [ ] Verify all features work correctly
+
+### Subsequent Deployments
+
+After each push to main branch:
+
+1. **GitHub Actions runs automatically** (2-3 minutes)
+   - Builds frontend assets
+   - Uploads changed files via FTP
+   
+2. **Run commands on server** (choose one option):
+   - Via cPanel Terminal
+   - Via SSH
+   - Using the `deploy.php` script
+   
+3. **Required commands:**
+   ```bash
+   # Always run if composer.json or composer.lock changed
+   composer install --optimize-autoloader --no-dev
+   
+   # Always run if database migrations added
+   php artisan migrate --force
+   
+   # Always run to refresh caches
+   php artisan optimize:clear
+   php artisan config:cache
+   php artisan route:cache
+   php artisan view:cache
+   ```
+
+**Quick Post-Deployment:**
+If you know nothing changed in dependencies or database, you can run just:
+```bash
+php artisan optimize:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+### Monitoring Deployments
+
+**View Deployment Status:**
+1. Go to: https://github.com/sagar-sun21/MyBooks/actions
+2. Click on the latest workflow run
+3. View each step's progress and logs
+
+**Deployment Steps:**
+- ✓ Checkout code
+- ✓ Setup PHP 8.1
+- ✓ Setup Node.js 20
+- ✓ Install NPM dependencies
+- ✓ Build production assets
+- ✓ Deploy via FTP
+- ✓ Post-deployment instructions
+
+**Interpreting Results:**
+- 🟢 Green checkmark = Deployment successful
+- 🔴 Red X = Deployment failed (click to see error logs)
+- 🟡 Yellow circle = Deployment in progress
+
+**Check Logs:**
+- Click on any step to see detailed logs
+- "Deploy via FTP" step shows which files were uploaded
+- "Post-deployment instructions" reminds you of manual steps
 
 ### Troubleshooting
 
-#### Workflow Fails to Run
-- **Check branch name**: Workflows only trigger on push to `main` branch
-- **Check workflow syntax**: YAML formatting errors prevent execution
-- **Check Actions enabled**: Go to Settings → Actions → General
+#### FTP Connection Failed
 
-#### FTP/SFTP Connection Fails
 ```
-Error: Cannot connect to server
+Error: Cannot connect to FTP server
 ```
-- Verify `FTP_SERVER` or `SFTP_SERVER` is correct
-- Verify `FTP_USERNAME`/`FTP_PASSWORD` or `SFTP_USERNAME`/`SFTP_PASSWORD`
-- Check firewall allows connections from GitHub Actions IPs
-- Verify `FTP_SERVER_DIR` or `SFTP_REMOTE_PATH` ends with `/`
 
-#### SSH Commands Fail
-```
-Error: SSH connection failed
-```
-- Verify `SSH_HOST`, `SSH_USERNAME`, `SSH_PASSWORD`, and `SSH_PORT`
-- Check SSH access is enabled on your hosting
-- Verify `DEPLOY_PATH` is correct absolute path
-- Some shared hosts block SSH access from certain IPs
+**Solutions:**
+- Verify `FTP_SERVER` is correct (e.g., `ftp.yourdomain.com`)
+- Check that FTP port 21 is not blocked
+- Ensure FTP is enabled in cPanel (cPanel → FTP Accounts)
+- Try passive mode: Contact hosting if active mode fails
+- Check firewall: Some hosts block GitHub Actions IPs
+- Verify `FTP_USERNAME` and `FTP_PASSWORD` are correct
 
-#### Missing Dependencies After Deployment
-```
-Error: Class 'Something' not found
-```
-- Check `vendor/` directory exists on server
-- Run `composer install --optimize-autoloader --no-dev` manually on server
-- Check PHP version on server matches composer.json requirement (PHP 8.1+)
+#### Files Not Updating on Server
 
-#### Assets Not Loading
 ```
-Error: 404 Not Found on CSS/JS files
+Deployment succeeds but changes don't appear
 ```
-- Verify `public/build/` directory exists on server
-- Check `npm run build` completed successfully in workflow
-- Clear browser cache
+
+**Solutions:**
+- Check `FTP_SERVER_DIR` path is correct and ends with `/`
+- Verify FTP user has write permissions to the directory
+- Clear browser cache (Ctrl+Shift+R or Cmd+Shift+R)
+- Run `php artisan optimize:clear` on server
+- Check if files were actually uploaded in workflow logs
+- Verify you're checking the correct domain/subdomain
+
+#### 500 Internal Server Error After Deployment
+
+```
+Website shows 500 error after deployment
+```
+
+**Solutions:**
+1. **Run composer install** (most common cause):
+   ```bash
+   composer install --optimize-autoloader --no-dev
+   ```
+   
+2. **Check .env file exists** and is configured:
+   ```bash
+   ls -la .env
+   cat .env  # Verify APP_KEY is set
+   ```
+   
+3. **Verify APP_KEY is set**:
+   ```bash
+   php artisan key:generate
+   ```
+   
+4. **Check file permissions**:
+   ```bash
+   chmod -R 775 storage
+   chmod -R 775 bootstrap/cache
+   find storage -type f -exec chmod 644 {} \;
+   find storage -type d -exec chmod 755 {} \;
+   ```
+   
+5. **Check error logs**:
+   ```bash
+   tail -f storage/logs/laravel.log
+   ```
+   
+6. **Clear all caches**:
+   ```bash
+   php artisan optimize:clear
+   ```
+
+#### Composer Not Found on Server
+
+```
+bash: composer: command not found
+```
+
+**Solutions:**
+- Check if Composer is installed: `composer --version`
+- Use full path: `/usr/local/bin/composer install --optimize-autoloader --no-dev`
+- Use composer.phar: `php composer.phar install --optimize-autoloader --no-dev`
+- Download Composer:
+  ```bash
+  curl -sS https://getcomposer.org/installer | php
+  php composer.phar install --optimize-autoloader --no-dev
+  ```
+- Contact hosting support to install Composer system-wide
+- Some hosts have it at: `/opt/cpanel/composer/bin/composer`
+
+#### Assets (CSS/JS) Not Loading
+
+```
+404 Not Found on /build/assets/app-*.js
+```
+
+**Solutions:**
+- Verify `npm run build` completed in workflow logs
+- Check `public/build/` directory exists on server
+- Verify `public/build/manifest.json` exists
 - Check `APP_URL` in `.env` matches your domain
+- Clear browser cache completely
+- Check web server serves static files from `public/`
 
 #### Database Migration Fails
+
 ```
 Error: SQLSTATE[HY000] [2002] Connection refused
 ```
-- Verify database credentials in `.env` on server
-- Check database exists and user has proper privileges
-- Verify `DB_HOST` (usually `localhost` on shared hosting)
+
+**Solutions:**
+- Verify database credentials in `.env` are correct
+- Check database and user exist in cPanel → MySQL Databases
+- Ensure database user has all privileges on the database
+- Verify `DB_HOST` is usually `localhost` on shared hosting
+- Test database connection:
+  ```bash
+  php artisan tinker
+  DB::connection()->getPdo();
+  ```
 
 #### Permission Denied Errors
+
 ```
 Error: The stream or file "storage/logs/laravel.log" could not be opened
 ```
-- Run manually on server:
-  ```bash
-  chmod -R 775 storage
-  chmod -R 775 bootstrap/cache
-  ```
-- Contact hosting support if permissions reset after deployment
 
-#### Deployment Succeeds but Site Shows Errors
-- Check `.env` file exists and is configured correctly
-- Verify `APP_KEY` is set in `.env`
-- Run `php artisan optimize:clear` on server
-- Check `storage/logs/laravel.log` for detailed errors
-- Temporarily enable `APP_DEBUG=true` to see error details
+**Solutions:**
+```bash
+# Fix storage permissions
+chmod -R 775 storage
+find storage -type f -exec chmod 644 {} \;
+find storage -type d -exec chmod 755 {} \;
+
+# Fix bootstrap/cache permissions
+chmod -R 775 bootstrap/cache
+find bootstrap/cache -type f -exec chmod 644 {} \;
+find bootstrap/cache -type d -exec chmod 755 {} \;
+
+# Ensure correct ownership (if you have access)
+chown -R username:username storage
+chown -R username:username bootstrap/cache
+```
+
+If permissions reset after each deployment, contact hosting support.
+
+#### Workflow Fails to Trigger
+
+**Solutions:**
+- Verify you pushed to `main` branch (not `master` or other)
+- Check GitHub Actions is enabled: Settings → Actions → General
+- Verify workflow file has no YAML syntax errors
+- Check you have push access to the repository
+
+#### Build Assets Fails in Workflow
+
+```
+Error: npm run build failed
+```
+
+**Solutions:**
+- Check `package.json` has `"build": "vite build"` script
+- Verify `vite.config.js` exists and is valid
+- Check Node.js version compatibility
+- Review build error logs in workflow output
+- Test build locally: `npm install && npm run build`
 
 ### Security Notes
 
-#### Protecting Your Secrets
-- **Never commit secrets** to your repository
-- **Use GitHub Secrets** for all sensitive credentials
-- **Rotate passwords regularly** - update secrets when changed
-- **Use SSH keys** instead of passwords when possible (requires workflow modification)
-- **Limit SSH access** - use dedicated deployment user with minimal permissions
+#### Protecting Your Credentials
 
-#### Safe Deployment Practices
-- **Never deploy `.env`** - it must be manually created on server
-- **Never use `dangerous-clean-slate: true`** - can delete server files
-- **Test on staging first** - create separate workflow for staging environment
-- **Keep backups** - backup database and files before deployments
-- **Monitor logs** - check workflow logs and Laravel logs regularly
+1. **Never commit `.env`** to GitHub
+   - The `.env` file contains sensitive credentials
+   - Always keep it in `.gitignore`
+   - Create `.env` manually on server
 
-#### Environment Security
-- Set `APP_DEBUG=false` in production `.env`
-- Set `APP_ENV=production` in production `.env`
-- Use HTTPS only (`SESSION_SECURE_COOKIE=true`)
-- Keep Laravel and dependencies updated
-- Review deployed files exclude list regularly
+2. **Protect GitHub Secrets**
+   - Only repository admins should have access
+   - Secrets are encrypted and never exposed in logs
+   - Rotate FTP password periodically
 
-#### Workflow Security
-- Review workflow files before enabling
-- Only grant necessary permissions to deployment users
-- Use SFTP instead of FTP when possible
-- Monitor GitHub Actions usage and logs
-- Disable workflows if not actively deploying
+3. **Delete deploy.php immediately**
+   - If using the deploy.php script approach
+   - Or protect it with a secret token
+   - Never leave it accessible after deployment
 
-### Advanced Configuration
+4. **Use strong FTP password**
+   - At least 16 characters
+   - Mix of letters, numbers, symbols
+   - Store securely in GitHub Secrets
+   - Don't reuse passwords
 
-#### Using SSH Keys Instead of Passwords
+5. **Keep .env secure on server**
+   - Set permissions to 644: `chmod 644 .env`
+   - Only readable by web server user
+   - Never accessible via web browser
 
-For better security, use SSH keys instead of passwords:
+#### Production Security Best Practices
 
-1. Generate SSH key pair on your local machine
-2. Add public key to server's `~/.ssh/authorized_keys`
-3. Add private key as GitHub Secret named `SSH_PRIVATE_KEY`
-4. Modify workflow to use `key` instead of `password`:
+1. **Environment Configuration:**
+   ```env
+   APP_ENV=production
+   APP_DEBUG=false
+   APP_URL=https://yourdomain.com
+   SESSION_SECURE_COOKIE=true
+   ```
 
-```yaml
-- name: Run post-deployment commands via SSH
-  uses: appleboy/ssh-action@v1.0.3
-  with:
-    host: ${{ secrets.SSH_HOST }}
-    username: ${{ secrets.SSH_USERNAME }}
-    key: ${{ secrets.SSH_PRIVATE_KEY }}
-    port: ${{ secrets.SSH_PORT }}
-    script: |
-      cd ${{ secrets.DEPLOY_PATH }}
-      php artisan migrate --force
-      # ... other commands
+2. **Use HTTPS:**
+   - Install SSL certificate (Let's Encrypt is free)
+   - Force HTTPS in `.htaccess`
+   - Set `SESSION_SECURE_COOKIE=true`
+
+3. **File Permissions:**
+   - Directories: 755 (rwxr-xr-x)
+   - Files: 644 (rw-r--r--)
+   - Storage: 775 (rwxrwxr-x)
+   - .env: 644 (rw-r--r--)
+
+4. **Keep Updated:**
+   - Update Laravel regularly
+   - Update Composer dependencies
+   - Update npm packages
+   - Monitor security advisories
+
+5. **Disable Directory Listing:**
+   - Ensure `Options -Indexes` in `.htaccess`
+   - Web server should not list directory contents
+
+### Performance Tips
+
+**Deployment Speed:**
+- First deployment: ~3-5 minutes (all files uploaded)
+- Subsequent deployments: ~1-2 minutes (only changed files)
+- Most time spent uploading `public/build` assets
+- Consider using SFTP if available (more secure and often faster)
+
+**Optimization Commands:**
+After deployment, these commands improve performance:
+```bash
+# Creates optimized class loader
+composer install --optimize-autoloader --no-dev
+
+# Caches configuration (faster config access)
+php artisan config:cache
+
+# Caches routes (faster routing)
+php artisan route:cache
+
+# Caches views (faster view rendering)
+php artisan view:cache
+
+# Enables OPcache if available
+# Check php.ini: opcache.enable=1
 ```
 
-#### Creating Staging Workflow
+**Additional Performance Tips:**
+- Enable OPcache in PHP (ask hosting to enable)
+- Use Redis or Memcached for caching (if available)
+- Enable Gzip compression in `.htaccess`
+- Optimize images before uploading
+- Use CDN for static assets (advanced)
 
-Copy one of the workflows and modify for staging:
-
-1. Duplicate workflow file (e.g., `deploy-staging-ftp.yml`)
-2. Change trigger branch to `develop` or `staging`
-3. Add staging-specific secrets (e.g., `STAGING_FTP_SERVER`)
-4. Update secret references in workflow
-
-```yaml
-on:
-  push:
-    branches:
-      - develop  # Changed from main
-```
-
-#### Conditional SSH Commands
-
-Skip certain commands conditionally:
-
-```yaml
-- name: Run migrations (only on production)
-  if: github.ref == 'refs/heads/main'
-  uses: appleboy/ssh-action@v1.0.3
-  # ... rest of configuration
-```
-
-#### Notifications on Deployment
-
-Add Slack or email notifications:
-
-```yaml
-- name: Notify on success
-  if: success()
-  # Add your notification action here
-  
-- name: Notify on failure
-  if: failure()
-  # Add your notification action here
-```
+**Monitoring Performance:**
+- Check `storage/logs/laravel.log` for slow queries
+- Monitor database query count
+- Use Laravel Telescope for detailed debugging (development only)
 
 ---
 
-**Ready to automate?** Follow the setup instructions above and your deployments will be automated!
+**Ready to deploy?** Follow the Quick Setup Guide above and automate your deployments!
 
 ### Performance Optimization
 
