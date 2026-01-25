@@ -17,14 +17,23 @@ class BookResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'author' => $this->author,
+            'author_id' => $this->author_id,
+            'author' => $this->author ? [
+                'id' => $this->author->id,
+                'name' => $this->author->name,
+            ] : null,
             'isbn' => $this->isbn,
             'description' => $this->description,
             'cover_image' => $this->cover_image ? asset('storage/covers/' . $this->cover_image) : null,
             'is_read' => $this->is_read,
             'rating' => $this->rating,
             'notes' => $this->notes,
-            'category' => $this->category,
+            'categories' => $this->categories->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                ];
+            }),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
