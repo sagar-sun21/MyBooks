@@ -88,7 +88,7 @@ class BookController extends Controller
             ->where('user_id', auth()->id());
 
         // Search
-        if ($request->has('search') && $request->search) {
+        if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', "%{$search}%")
@@ -100,35 +100,33 @@ class BookController extends Controller
         }
 
         // Filter by author
-        if ($request->has('author') && $request->author) {
+        if ($request->filled('author')) {
             $query->where('author_id', $request->author);
         }
 
         // Filter by multiple categories
-        if ($request->has('categories') && is_array($request->categories) && count($request->categories) > 0) {
+        if ($request->filled('categories') && is_array($request->categories)) {
             $query->whereHas('categories', function ($q) use ($request) {
-                $q->whereIn('category_id', $request->categories);
+                $q->whereIn('categories.id', $request->categories);
             });
         }
 
         // Filter by read status
-        if ($request->has('is_read') && $request->is_read !== null && $request->is_read !== '') {
-            $query->where('is_read', $request->is_read);
+        if ($request->filled('is_read')) {
+            $query->where('is_read', (bool) $request->is_read);
         }
 
         // Filter by rating
-        if ($request->has('rating') && $request->rating) {
+        if ($request->filled('rating')) {
             $query->where('rating', $request->rating);
         }
 
         $books = $query->latest()->paginate(12)->withQueryString();
-        $categories = Category::all();
-        $authors = Author::all();
-
+        
         return Inertia::render('Books/Index', [
             'books' => BookResource::collection($books),
-            'categories' => $categories,
-            'authors' => $authors,
+            'categories' => Category::orderBy('name')->get(),
+            'authors' => Author::orderBy('name')->get(),
             'filters' => $request->only(['search', 'categories', 'author', 'is_read', 'rating']),
         ]);
     }

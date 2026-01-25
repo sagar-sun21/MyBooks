@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import StarRating from './StarRating';
 
 export default function BookCard({ book, onToggleRead, onDelete }) {
+    console.log({book});
     return (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
             <Link href={route('books.show', book.id)}>
@@ -44,7 +45,7 @@ export default function BookCard({ book, onToggleRead, onDelete }) {
                         {book.title}
                     </h3>
                 </Link>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{book.author}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{book.author.name}</p>
                 
                 {book.category && (
                     <span className="inline-block px-2 py-1 text-xs font-medium rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 mb-2">
