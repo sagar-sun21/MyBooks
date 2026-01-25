@@ -14,21 +14,21 @@ export default function Edit({ auth, book, categories, authors = [] }) {
     const [authorsList, setAuthorsList] = useState(authors);
 
     // Get initial category IDs from book's categories
-    const initialCategoryIds = book.categories?.map(c => c.id) || [];
+    const initialCategoryIds = book.data.categories?.map(c => c.id) || [];
     // Check if author is in the existing list
-    const initialAuthorId = book.author_id || '';
+    const initialAuthorId = book.data.author_id || '';
 
     const { data, setData, post, processing, errors } = useForm({
-        title: book.title || '',
+        title: book.data.title || '',
         author_id: initialAuthorId,
         author: '',
-        isbn: book.isbn || '',
-        description: book.description || '',
+        isbn: book.data.isbn || '',
+        description: book.data.description || '',
         cover_image: null,
         category_ids: initialCategoryIds,
-        is_read: book.is_read || false,
-        rating: book.rating || 0,
-        notes: book.notes || '',
+        is_read: book.data.is_read || false,
+        rating: book.data.rating || 0,
+        notes: book.data.notes || '',
         _method: 'PUT',
     });
 
@@ -40,7 +40,7 @@ export default function Edit({ auth, book, categories, authors = [] }) {
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(route('books.update', book.id));
+        post(route('books.update', book.data.id));
     };
 
     return (
@@ -60,7 +60,7 @@ export default function Edit({ auth, book, categories, authors = [] }) {
                 </div>
             }
         >
-            <Head title={`Edit ${book.title}`} />
+            <Head title={`Edit ${book.data.title}`} />
 
             <div className="py-12">
                 <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
@@ -213,7 +213,7 @@ export default function Edit({ auth, book, categories, authors = [] }) {
                                         value={data.cover_image}
                                         onChange={(file) => setData('cover_image', file)}
                                         error={errors.cover_image}
-                                        existingImage={book.cover_image}
+                                        existingImage={book.data.cover_image}
                                     />
 
                                     {/* Read Status */}
