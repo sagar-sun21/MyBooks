@@ -16,4 +16,4 @@ yarn-error.log
 /storage/logs/*.log
 public/build/
 /storage
-/storage
+/bootstrap/cache/*.php
