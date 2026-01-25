@@ -23,8 +23,12 @@ class StoreBookRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'max:255'],
-            'author_id' => ['nullable', 'exists:authors,id'],
-            'author' => ['nullable', 'string', 'max:255'],
+            'author_id' => ['nullable', function ($attribute, $value, $fail) {
+                if ($value !== 'other' && $value !== null && !\App\Models\Author::where('id', $value)->exists()) {
+                    $fail('The selected author is invalid.');
+                }
+            }],
+            'author' => ['nullable', 'required_if:author_id,other', 'string', 'max:255'],
             'isbn' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'cover_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:6144'],
