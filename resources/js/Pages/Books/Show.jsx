@@ -109,19 +109,23 @@ export default function Show({ auth, book }) {
                                             )}
                                         </div>
                                         <p className="mt-2 text-xl text-gray-600 dark:text-gray-400">
-                                            by {book.author}
+                                            by {book.author?.name || 'Unknown Author'}
                                         </p>
                                     </div>
 
-                                    {/* Category */}
-                                    {book.category && (
+                                    {/* Categories */}
+                                    {book.categories && book.categories.length > 0 && (
                                         <div>
                                             <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase">
-                                                Category
+                                                Categories
                                             </h3>
-                                            <span className="mt-1 inline-block px-3 py-1 text-sm font-medium rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
-                                                {book.category.name}
-                                            </span>
+                                            <div className="mt-1 flex flex-wrap gap-2">
+                                                {book.categories.map((category) => (
+                                                    <span key={category.id} className="inline-block px-3 py-1 text-sm font-medium rounded-md bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200">
+                                                        {category.name}
+                                                    </span>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
 
