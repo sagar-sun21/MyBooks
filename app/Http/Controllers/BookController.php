@@ -32,21 +32,32 @@ class BookController extends Controller
         }
 
         // Handle EXIF orientation for mobile phone images
-        $exif = @exif_read_data($file->getRealPath());
-        if ($exif && !empty($exif['Orientation'])) {
-            switch ($exif['Orientation']) {
-                case 3:
-                    // 180 degrees
-                    $src = imagerotate($src, 180, 0);
-                    break;
-                case 6:
-                    // 90 degrees clockwise (270 counter-clockwise)
-                    $src = imagerotate($src, -90, 0);
-                    break;
-                case 8:
-                    // 90 degrees counter-clockwise (270 clockwise)
-                    $src = imagerotate($src, 90, 0);
-                    break;
+        if (function_exists('exif_read_data')) {
+            $exif = @exif_read_data($file->getRealPath());
+            if ($exif && !empty($exif['Orientation'])) {
+                $rotated = false;
+                switch ($exif['Orientation']) {
+                    case 1:
+                        // Normal - no rotation needed
+                        break;
+                    case 3:
+                        // 180 degrees
+                        $rotated = imagerotate($src, 180, 0);
+                        break;
+                    case 6:
+                        // 90 degrees clockwise (270 counter-clockwise)
+                        $rotated = imagerotate($src, -90, 0);
+                        break;
+                    case 8:
+                        // 90 degrees counter-clockwise (270 clockwise)
+                        $rotated = imagerotate($src, 90, 0);
+                        break;
+                }
+                // Only update $src if rotation succeeded
+                if ($rotated !== false) {
+                    imagedestroy($src);
+                    $src = $rotated;
+                }
             }
         }
 
