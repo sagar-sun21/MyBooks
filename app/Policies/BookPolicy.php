@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Book;
 use App\Models\User;
 use Illuminate\Auth\Access\Response;
+use Illuminate\Support\Facades\Log;
 
 class BookPolicy
 {
@@ -21,6 +22,7 @@ class BookPolicy
      */
     public function view(User $user, Book $book): bool
     {
+        Log::info("user", ['user_id' => $user->id, 'book_user_id' => $book->user_id]);
         return $user->id === $book->user_id;
     }
 
