@@ -196,7 +196,7 @@ class BookController extends Controller
     {
         $this->authorize('view', $book);
         
-        $book->load('categories');
+        $book->load(['categories', 'author']);
 
         return Inertia::render('Books/Show', [
             'book' => new BookResource($book),
@@ -209,6 +209,8 @@ class BookController extends Controller
     public function edit(Book $book)
     {
         $this->authorize('update', $book);
+        
+        $book->load(['categories', 'author']);
         
         $categories = Category::all();
         $authors = Author::all();
