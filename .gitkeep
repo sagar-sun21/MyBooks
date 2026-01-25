@@ -1,0 +1,5 @@
+# On Windows
+type nul > bootstrap\cache\.gitkeep
+
+# On Linux/Mac/Git Bash
+touch bootstrap/cache/.gitkeep
