@@ -16,13 +16,7 @@ Route::get('/dashboard', function () {
     $booksRead = \App\Models\Book::where('user_id', auth()->id())->where('is_read', true)->count();
     $booksUnread = \App\Models\Book::where('user_id', auth()->id())->where('is_read', false)->count();
     $averageRating = \App\Models\Book::where('user_id', auth()->id())->whereNotNull('rating')->avg('rating');
-    $booksByCategory = \App\Models\Book::where('user_id', auth()->id())
-        ->with('category')
-        ->get()
-        ->groupBy('category.name')
-        ->map(function ($books) {
-            return count($books);
-        });
+    $booksByCategory = [];
 
     return Inertia::render('Dashboard', [
         'stats' => [
