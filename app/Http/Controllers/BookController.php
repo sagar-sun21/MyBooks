@@ -227,6 +227,18 @@ class BookController extends Controller
         $data = $request->validated();
         $data['is_read'] = $request->boolean('is_read');
 
+        // Handle author - either use selected author_id or create new author
+        if ($request->has('author_id') && $request->author_id !== 'other' && $request->author_id !== null) {
+            // Use existing author
+            $data['author_id'] = $request->author_id;
+            unset($data['author']);
+        } elseif ($request->has('author') && $request->author) {
+            // Create new author
+            $author = Author::create(['name' => $request->author]);
+            $data['author_id'] = $author->id;
+            unset($data['author']);
+        }
+
         // Handle image upload with compression (limit stored file to <= 2MB)
         if ($request->hasFile('cover_image')) {
             // Delete old image
