@@ -189,6 +189,7 @@ class BookController extends Controller
      */
     public function store(StoreBookRequest $request)
     {
+        Log::info('Storing new book', ['user_id' => auth()->id(), 'request_data' => $request->all()]);
         $data = $request->validated();
         $data['user_id'] = auth()->id();
         $data['is_read'] = $request->boolean('is_read');
