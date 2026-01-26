@@ -78,7 +78,7 @@ export default function ImageUpload({ value, onChange, error, existingImage = nu
                 ref={fileInputRef}
                 type="file"
                 onChange={handleFileChange}
-                accept="image/jpeg,image/png,image/jpg,image/gif"
+                accept="image/jpeg,image/png,image/jpg,image/gif,image/webp,image/heic,image/heif"
                 className="hidden"
             />
             
@@ -87,7 +87,7 @@ export default function ImageUpload({ value, onChange, error, existingImage = nu
             )}
             
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                PNG, JPG, GIF up to 2MB
+                PNG, JPG, GIF, WEBP, HEIC, HEIF up to 6MB
             </p>
         </div>
     );

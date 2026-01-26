@@ -21,94 +21,102 @@ class BookController extends Controller
      */
     private function compressAndStoreCoverImage(\Illuminate\Http\UploadedFile $file, int $maxBytes = 2 * 1024 * 1024): string
     {
-        // Create image resource from file (supports jpeg/png/gif via createfromstring)
-        $raw = file_get_contents($file->getRealPath());
-        $src = imagecreatefromstring($raw);
-        if ($src === false) {
-            // Fallback: store original if decoding failed
+        try {
+            // Create image resource from file (supports jpeg/png/gif via createfromstring)
+            $raw = file_get_contents($file->getRealPath());
+            $src = imagecreatefromstring($raw);
+            if ($src === false) {
+                // Fallback: store original if decoding failed
+                $filename = time() . '_' . $file->getClientOriginalName();
+                $file->storeAs('public/covers', $filename);
+                return $filename;
+            }
+
+            // Handle EXIF orientation for mobile phone images
+            if (function_exists('exif_read_data')) {
+                $exif = @exif_read_data($file->getRealPath());
+                if ($exif && !empty($exif['Orientation'])) {
+                    $rotated = false;
+                    switch ($exif['Orientation']) {
+                        case 1:
+                            // Normal - no rotation needed
+                            break;
+                        case 3:
+                            // 180 degrees
+                            $rotated = imagerotate($src, 180, 0);
+                            break;
+                        case 6:
+                            // 90 degrees clockwise (270 counter-clockwise)
+                            $rotated = imagerotate($src, -90, 0);
+                            break;
+                        case 8:
+                            // 90 degrees counter-clockwise (270 clockwise)
+                            $rotated = imagerotate($src, 90, 0);
+                            break;
+                    }
+                    // Only update $src if rotation succeeded
+                    if ($rotated !== false) {
+                        imagedestroy($src);
+                        $src = $rotated;
+                    }
+                }
+            }
+
+            // Normalize to true color
+            $width = imagesx($src);
+            $height = imagesy($src);
+
+            // Resize if larger than max dimension to keep file size manageable
+            $maxDim = 1600; // reasonable upper bound for covers
+            $targetW = $width;
+            $targetH = $height;
+            if ($width > $maxDim || $height > $maxDim) {
+                $ratio = min($maxDim / $width, $maxDim / $height);
+                $targetW = (int) floor($width * $ratio);
+                $targetH = (int) floor($height * $ratio);
+            }
+
+            $dst = imagecreatetruecolor($targetW, $targetH);
+            // Fill background white (for PNG/GIF transparency) and copy resampled
+            $white = imagecolorallocate($dst, 255, 255, 255);
+            imagefill($dst, 0, 0, $white);
+            imagecopyresampled($dst, $src, 0, 0, 0, 0, $targetW, $targetH, $width, $height);
+
+            // Try decreasing quality until under maxBytes
+            $quality = 85;
+            $minQuality = 50;
+            $binary = null;
+            while ($quality >= $minQuality) {
+                ob_start();
+                imagejpeg($dst, null, $quality);
+                $binary = ob_get_clean();
+                if (strlen($binary) <= $maxBytes) {
+                    break;
+                }
+                $quality -= 5;
+            }
+
+            // If still too large, do one more pass at min quality
+            if ($binary === null || strlen($binary) > $maxBytes) {
+                ob_start();
+                imagejpeg($dst, null, $minQuality);
+                $binary = ob_get_clean();
+            }
+
+            imagedestroy($src);
+            imagedestroy($dst);
+
+            $baseName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $filename = time() . '_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $baseName) . '.jpg';
+            \Illuminate\Support\Facades\Storage::put('public/covers/' . $filename, $binary);
+            return $filename;
+        } catch (\Exception $e) {
+            // On any error, fallback to storing original file
+            Log::error('Image compression failed: ' . $e->getMessage());
             $filename = time() . '_' . $file->getClientOriginalName();
             $file->storeAs('public/covers', $filename);
             return $filename;
         }
-
-        // Handle EXIF orientation for mobile phone images
-        if (function_exists('exif_read_data')) {
-            $exif = @exif_read_data($file->getRealPath());
-            if ($exif && !empty($exif['Orientation'])) {
-                $rotated = false;
-                switch ($exif['Orientation']) {
-                    case 1:
-                        // Normal - no rotation needed
-                        break;
-                    case 3:
-                        // 180 degrees
-                        $rotated = imagerotate($src, 180, 0);
-                        break;
-                    case 6:
-                        // 90 degrees clockwise (270 counter-clockwise)
-                        $rotated = imagerotate($src, -90, 0);
-                        break;
-                    case 8:
-                        // 90 degrees counter-clockwise (270 clockwise)
-                        $rotated = imagerotate($src, 90, 0);
-                        break;
-                }
-                // Only update $src if rotation succeeded
-                if ($rotated !== false) {
-                    imagedestroy($src);
-                    $src = $rotated;
-                }
-            }
-        }
-
-        // Normalize to true color
-        $width = imagesx($src);
-        $height = imagesy($src);
-
-        // Resize if larger than max dimension to keep file size manageable
-        $maxDim = 1600; // reasonable upper bound for covers
-        $targetW = $width;
-        $targetH = $height;
-        if ($width > $maxDim || $height > $maxDim) {
-            $ratio = min($maxDim / $width, $maxDim / $height);
-            $targetW = (int) floor($width * $ratio);
-            $targetH = (int) floor($height * $ratio);
-        }
-
-        $dst = imagecreatetruecolor($targetW, $targetH);
-        // Fill background white (for PNG/GIF transparency) and copy resampled
-        $white = imagecolorallocate($dst, 255, 255, 255);
-        imagefill($dst, 0, 0, $white);
-        imagecopyresampled($dst, $src, 0, 0, 0, 0, $targetW, $targetH, $width, $height);
-
-        // Try decreasing quality until under maxBytes
-        $quality = 85;
-        $minQuality = 50;
-        $binary = null;
-        while ($quality >= $minQuality) {
-            ob_start();
-            imagejpeg($dst, null, $quality);
-            $binary = ob_get_clean();
-            if (strlen($binary) <= $maxBytes) {
-                break;
-            }
-            $quality -= 5;
-        }
-
-        // If still too large, do one more pass at min quality
-        if ($binary === null || strlen($binary) > $maxBytes) {
-            ob_start();
-            imagejpeg($dst, null, $minQuality);
-            $binary = ob_get_clean();
-        }
-
-        imagedestroy($src);
-        imagedestroy($dst);
-
-        $baseName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $filename = time() . '_' . preg_replace('/[^A-Za-z0-9_-]/', '_', $baseName) . '.jpg';
-        \Illuminate\Support\Facades\Storage::put('public/covers/' . $filename, $binary);
-        return $filename;
     }
     /**
      * Display a listing of the resource.
