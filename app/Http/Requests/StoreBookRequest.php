@@ -32,7 +32,7 @@ class StoreBookRequest extends FormRequest
             'author' => ['nullable', 'required_if:author_id,other', 'string', 'max:255'],
             'isbn' => ['nullable', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'cover_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,heic', 'max:6144'],
+            //'cover_image' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,heic', 'max:6144'],
             'category_ids' => ['nullable', 'array'],
             'category_ids.*' => ['exists:categories,id'],
             'is_read' => ['boolean'],
