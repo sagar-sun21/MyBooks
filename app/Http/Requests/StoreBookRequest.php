@@ -11,6 +11,7 @@ class StoreBookRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        \Log::info('Test log test route - logging is working!');
         return true;
     }
 
