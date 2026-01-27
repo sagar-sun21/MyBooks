@@ -16,12 +16,20 @@ Route::get('/dashboard', function () {
     $booksRead = \App\Models\Book::where('user_id', auth()->id())->where('is_read', true)->count();
     $booksUnread = \App\Models\Book::where('user_id', auth()->id())->where('is_read', false)->count();
     $averageRating = \App\Models\Book::where('user_id', auth()->id())->whereNotNull('rating')->avg('rating');
+    $booksByAuthor = \App\Models\Book::where('user_id', auth()->id())
+        ->with('author')
+        ->get()
+        ->groupBy('author.name')
+        ->map(function ($books) {
+            return count($books);
+        });
     $booksByCategory = \App\Models\Category::withCount([
             'books' => function ($query) {
                 $query->where('user_id', auth()->id());
             }
         ])
         ->having('books_count', '>', 0)
+        ->orderBy('books_count', 'desc')
         ->get()
         ->map(function ($category) {
             return [
@@ -38,6 +46,7 @@ Route::get('/dashboard', function () {
             'booksUnread' => $booksUnread,
             'averageRating' => round($averageRating, 1),
             'booksByCategory' => $booksByCategory,
+            'booksByAuthor' => $booksByAuthor,
         ],
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');

@@ -136,10 +136,10 @@ export default function Index({ auth, books, categories, authors = [], filters }
                             </div>
 
                             {/* Pagination */}
-                            {books.links.length > 3 && (
+                            {books.meta?.links && books.meta.links.length > 3 && (
                                 <div className="mt-6 flex justify-center">
                                     <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                                        {books.links.map((link, index) => (
+                                        {books.meta.links.map((link, index) => (
                                             link.url ? (
                                                 <Link
                                                     key={index}
@@ -153,7 +153,7 @@ export default function Index({ auth, books, categories, authors = [], filters }
                                                     } ${
                                                         index === 0 ? 'rounded-l-md' : ''
                                                     } ${
-                                                        index === books.links.length - 1 ? 'rounded-r-md' : ''
+                                                        index === books.meta.links.length - 1 ? 'rounded-r-md' : ''
                                                     }`}
                                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                                 />
@@ -163,7 +163,7 @@ export default function Index({ auth, books, categories, authors = [], filters }
                                                     className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-600 cursor-not-allowed ${
                                                         index === 0 ? 'rounded-l-md' : ''
                                                     } ${
-                                                        index === books.links.length - 1 ? 'rounded-r-md' : ''
+                                                        index === books.meta.links.length - 1 ? 'rounded-r-md' : ''
                                                     }`}
                                                     dangerouslySetInnerHTML={{ __html: link.label }}
                                                 />

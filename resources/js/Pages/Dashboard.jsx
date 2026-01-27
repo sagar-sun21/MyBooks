@@ -113,6 +113,21 @@ export default function Dashboard({ auth, stats }) {
                             </div>
                         </div>
                     )}
+
+                    {/* Books by Author */}
+                    {stats.booksByAuthor && (
+                        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg p-6 mt-3">
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Books by Author</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {Object.entries(stats.booksByAuthor).map(([name, count]) => (
+                                    <div key={name} className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                        <span className="text-sm font-medium text-gray-900 dark:text-white">{name}</span>
+                                        <span className="text-sm text-gray-600 dark:text-gray-400">{count} {count === 1 ? 'book' : 'books'}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </AuthenticatedLayout>
