@@ -138,19 +138,36 @@ export default function Index({ auth, books, categories, authors = [], filters }
                             {/* Pagination */}
                             {books.links.length > 3 && (
                                 <div className="mt-6 flex justify-center">
-                                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+                                    <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                                         {books.links.map((link, index) => (
-                                            <button
-                                                key={index}
-                                                onClick={() => link.url && router.get(link.url)}
-                                                disabled={!link.url}
-                                                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                                    link.active
-                                                        ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-900 dark:border-indigo-500 dark:text-indigo-200'
-                                                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
-                                                } ${!link.url && 'opacity-50 cursor-not-allowed'}`}
-                                                dangerouslySetInnerHTML={{ __html: link.label }}
-                                            />
+                                            link.url ? (
+                                                <Link
+                                                    key={index}
+                                                    href={link.url}
+                                                    preserveState
+                                                    preserveScroll
+                                                    className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium transition-colors duration-200 ${
+                                                        link.active
+                                                            ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600 dark:bg-indigo-900 dark:border-indigo-500 dark:text-indigo-200'
+                                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700'
+                                                    } ${
+                                                        index === 0 ? 'rounded-l-md' : ''
+                                                    } ${
+                                                        index === books.links.length - 1 ? 'rounded-r-md' : ''
+                                                    }`}
+                                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                                />
+                                            ) : (
+                                                <span
+                                                    key={index}
+                                                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-300 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-600 cursor-not-allowed ${
+                                                        index === 0 ? 'rounded-l-md' : ''
+                                                    } ${
+                                                        index === books.links.length - 1 ? 'rounded-r-md' : ''
+                                                    }`}
+                                                    dangerouslySetInnerHTML={{ __html: link.label }}
+                                                />
+                                            )
                                         ))}
                                     </nav>
                                 </div>
